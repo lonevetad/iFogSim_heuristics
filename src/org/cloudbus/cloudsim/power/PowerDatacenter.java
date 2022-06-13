@@ -34,7 +34,7 @@ import org.cloudbus.cloudsim.core.predicates.PredicateType;
  * Issue 13, Pages: 1397-1420, John Wiley & Sons, Ltd, New York, USA, 2012
  * 
  * @author Anton Beloglazov
- * @since CloudSim Toolkit 2.0
+ * @since CloudSim Toolkit 2.0 
  */
 public class PowerDatacenter extends Datacenter {
 

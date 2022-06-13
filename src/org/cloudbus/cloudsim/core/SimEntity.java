@@ -25,7 +25,7 @@ import org.cloudbus.cloudsim.core.predicates.Predicate;
  * code would be placed.
  * </ul>
  * 
- * @author Marcos Dias de Assuncao
+ * @author Marcos Dias de Assuncao 
  * @since CloudSim Toolkit 1.0
  */
 public abstract class SimEntity implements Cloneable {
