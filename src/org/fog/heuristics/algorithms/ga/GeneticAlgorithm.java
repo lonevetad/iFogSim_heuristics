@@ -6,10 +6,10 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.function.BiFunction;
 
+import org.apache.commons.math3.util.Pair;
 import org.fog.heuristics.Heuristic;
-import org.fog.utils.Pair;
+import org.fog.heuristics.SolutionMutator;
 
 public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements Heuristic<C> {
 	protected static final double log_2 = Math.log(2);
@@ -24,9 +24,9 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 		this.thresholdPercentageFitnessImprovement = 0.0125;
 	}
 
-	public GeneticAlgorithm(BiFunction<T, Random, T> mutationProvider) {
+	public GeneticAlgorithm(SolutionMutator<T, C> mutationProvider) {
 		this();
-		this.mutationProvider = mutationProvider;
+		this.mutator = mutationProvider;
 	}
 
 	/**
@@ -36,7 +36,7 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 
 	/**
 	 * */
-	protected BiFunction<T, Random, T> mutationProvider;
+	protected SolutionMutator<T, C> mutator;
 
 	/**
 	 * If the maximum fitness does not improves by this relative (percentage from
@@ -49,8 +49,8 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 	/**
 	 * Function to determine the new value of a gene after a random mutation
 	 */
-	public BiFunction<T, Random, T> getMutationProvider() {
-		return mutationProvider;
+	public SolutionMutator<T, C> getMutationProvider() {
+		return mutator;
 	}
 
 	public abstract double getProbabilityMutation();
@@ -66,10 +66,10 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 	/**
 	 * See {@link #getMutationProvider()}.
 	 * 
-	 * @param mutationProvider
+	 * @param mutator
 	 */
-	public void setMutationProvider(BiFunction<T, Random, T> mutationProvider) {
-		this.mutationProvider = mutationProvider;
+	public void setMutationProvider(SolutionMutator<T, C> mutator) {
+		this.mutator = mutator;
 	}
 
 	//
@@ -162,7 +162,7 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 		genes = chromosome.getGenes();
 		for (T g : genes) {
 			if (getProbabilityMutation() > r.nextDouble()) {
-				mutations.add(new Pair<>(i, this.mutationProvider.apply(g, r)));
+				mutations.add(new Pair<>(i, this.mutator.mutateFragmentOfSolution(g, chromosome, this, r)));
 			}
 			i++;
 		}

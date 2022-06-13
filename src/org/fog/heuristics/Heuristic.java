@@ -5,6 +5,12 @@ import java.util.Random;
 import org.fog.heuristics.algorithms.ga.GeneticAlgorithm;
 
 public interface Heuristic<T> {
+	public static enum HeuristicType {
+		SingleSolution, PopulationBased;
+	}
+
+	public HeuristicType getHeuristicType();
+
 	/**
 	 * Acts as a metric, evaluating the provided solution. <br>
 	 * The actual meaning and usage depends on th heuristic itself: it may be the
@@ -24,9 +30,11 @@ public interface Heuristic<T> {
 	}
 
 	/**
-	 * Perform the heuristic and select the best candidate (as a solution). Note: if
-	 * {@code maxIteration} (second parameter) is negative or equal to zero, then
-	 * it's ignored in the loop condition: only the fitness is considered
+	 * Perform the heuristic and select the best candidate (as a solution), starting
+	 * from an initial guess.
+	 * <p>
+	 * Note: if {@code maxIteration} (second parameter) is negative or equal to
+	 * zero, then it's ignored in the loop condition: only the fitness is considered
 	 * 
 	 * @param maxIterations maximum amount of training/finding iterations; ignored
 	 *                      if non-positive

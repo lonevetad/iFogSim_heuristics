@@ -1,15 +1,18 @@
 package org.fog.heuristics.fogImplementations;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.function.BiFunction;
 
 import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.entities.FogDevice;
+import org.fog.heuristics.Heuristic;
+import org.fog.heuristics.SolutionMutator;
+import org.fog.heuristics.SolutionsProducerEvaluator;
+import org.fog.heuristics.SolutionsProducerEvaluator.SolutionDeployCosts;
 import org.fog.heuristics.algorithms.ga.GeneticAlgorithm;
-import org.fog.heuristics.fogImplementations.Utils.ListDevices;
 
 /**
  * Utility class that both provides the so-called "mutations" (used in
@@ -20,25 +23,34 @@ import org.fog.heuristics.fogImplementations.Utils.ListDevices;
  * Beware: its' NOT synchronized! Different instances must be created in order
  * to not mess up the results!
  */
-public class SolutionMutatorFog implements BiFunction<PieceOfSolution, Random, PieceOfSolution> {
+public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements SolutionMutator<PieceOfSolution, S> {
 
 	@Override
-	public PieceOfSolution apply(PieceOfSolution oldSolution, Random r) {
-		return Utils.newRandomPieceOfSolution(oldSolution.getModule(), getDevicesPartitions(),
-				getApplicationsSubmitted(), getDevices(), r);
+	public PieceOfSolution mutateFragmentOfSolution(PieceOfSolution originalFragment, S solutionContext,
+			Heuristic<S> heuristicContext, Random r) {
+		return SolutionsProducerEvaluator.newRandomPieceOfSolution(getApplicationsSubmitted(),
+				originalFragment.getModule(), getDevicesPartitions(), getDevices(), r,
+				this.costsSolutions.get(solutionContext), null);
 	}
 
 	protected Map<String, Application> applicationsSubmitted;
 	protected List<AppModule> modules;
 	protected List<FogDevice> devices;
 	protected ListDevices[] devicesPartitions;
+	protected Map<S, SolutionDeployCosts<S>> costsSolutions;
 
-	public void resetEvolutionEnvironment(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-			List<FogDevice> devices) {
-		resetEvolutionEnvironment(applicationsSubmitted, modules, devices, Utils.partitionateDevicesByType(devices));
+	public SolutionMutatorFog() {
+		super();
+		this.costsSolutions = new HashMap<>();
 	}
 
-	public void resetEvolutionEnvironment(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
+	public void resetContext(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
+			List<FogDevice> devices) {
+		resetContext(applicationsSubmitted, modules, devices,
+				SolutionsProducerEvaluator.partitionateDevicesByType(devices));
+	}
+
+	public void resetContext(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
 			List<FogDevice> devices, ListDevices[] devicesPartitions) {
 		this.applicationsSubmitted = applicationsSubmitted;
 		this.modules = modules;
@@ -60,5 +72,15 @@ public class SolutionMutatorFog implements BiFunction<PieceOfSolution, Random, P
 
 	public ListDevices[] getDevicesPartitions() {
 		return devicesPartitions;
+	}
+
+	//
+
+	/**
+	 * DO NOT USE IT! <br>
+	 * FOR HEURISTICS ONLY!
+	 */
+	public void saveSolutionCostsInCache(S solution, SolutionDeployCosts<S> costs) {
+		this.costsSolutions.put(solution, costs);
 	}
 }

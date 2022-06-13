@@ -6,13 +6,14 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 
 /**
  * A Chromosome is a {@link List} of elements (see {@łink #getGenes()}) able to
  * be manipulated (see {@link #crossoverOnePoint(Chromosome, Random)} and
  * {@link #crossoverKPoint(Chromosome, int, Random)}).
  */
-public abstract class Chromosome<T> implements Cloneable {
+public abstract class Chromosome<T> implements Cloneable, Supplier<List<T>> {
 
 	public Chromosome() {
 		super();
@@ -24,6 +25,11 @@ public abstract class Chromosome<T> implements Cloneable {
 	}
 
 	public abstract List<T> getGenes();
+
+	@Override
+	public final List<T> get() {
+		return this.getGenes();
+	}
 
 	public abstract void setGenes(List<T> genes);
 
@@ -185,4 +191,32 @@ public abstract class Chromosome<T> implements Cloneable {
 		genes.forEach(clonedGenes::add);
 		return this.newInstance(clonedGenes);
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 37;
+		int result = 1;
+		result = prime * result + ((getGenes() == null) ? 0 : getGenes().hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!(obj instanceof Chromosome<?>))
+			return false;
+		@SuppressWarnings("unchecked")
+		Chromosome<T> other = (Chromosome<T>) obj;
+		List<T> genes, othergenes;
+		genes = this.getGenes();
+		othergenes = other.getGenes();
+		if (genes == null) {
+			if (othergenes != null)
+				return false;
+		} else if (!genes.equals(othergenes))
+			return false;
+		return true;
+	}
+
 }

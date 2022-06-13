@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -15,18 +16,30 @@ import org.fog.application.Application;
 import org.fog.entities.Actuator;
 import org.fog.entities.FogDevice;
 import org.fog.entities.Sensor;
-import org.fog.heuristics.fogImplementations.GeneticAlgorithmFog;
+import org.fog.heuristics.Heuristic.HeuristicType;
+import org.fog.heuristics.SolutionsProducerEvaluator;
 import org.fog.heuristics.fogImplementations.HeuristicFog;
 import org.fog.heuristics.fogImplementations.HeuristicFogFactory;
 import org.fog.heuristics.fogImplementations.SolutionModulesDeployed;
 import org.fog.heuristics.fogImplementations.SolutionMutatorFog;
+import org.fog.heuristics.fogImplementations.ga.ChromosomeFog;
+import org.fog.heuristics.fogImplementations.ga.GeneticAlgorithmFog;
 
 /**
  * TODO: Should generate a {@link SolutionModulesDeployed}.
  */
 public class ModulePlacementWithHeuristics extends ModulePlacement {
 	public static enum HeuristicAccepted implements HeuristicFogFactory {
-		GeneticAlgorith(GeneticAlgorithmFog::new);
+		GeneticAlgorith( //
+				new HeuristicFogFactory() {
+					@Override
+					public <S extends SolutionModulesDeployed> HeuristicFog newInstance(
+							Map<String, Application> applicationsSubmitted, List<AppModule> modules,
+							List<FogDevice> devices, SolutionMutatorFog<S> mutator) {
+						return new GeneticAlgorithmFog(applicationsSubmitted, modules, devices,
+								new SolutionMutatorFog<ChromosomeFog>());
+					}
+				});
 
 		HeuristicAccepted(HeuristicFogFactory factory) {
 			this.factory = factory;
@@ -35,9 +48,12 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		private final HeuristicFogFactory factory;
 
 		@Override
-		public HeuristicFog newInstance(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-				List<FogDevice> devices, SolutionMutatorFog mutationProvider) {
-			return this.factory.newInstance(applicationsSubmitted, modules, devices, mutationProvider);
+		public <S extends SolutionModulesDeployed> HeuristicFog newInstance(
+				Map<String, Application> applicationsSubmitted, List<AppModule> modules, List<FogDevice> devices,
+				SolutionMutatorFog<S> mutator) {
+			HeuristicFog h;
+			h = this.factory.newInstance(applicationsSubmitted, modules, devices, mutator);
+			return h;
 		}
 	}
 
@@ -65,8 +81,12 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 
 	public static final int MAX_ITERATIONS = 50;
 
+	//
+
 	public ModulePlacementWithHeuristics(List<FogDevice> fogDevices, List<Sensor> sensors, List<Actuator> actuators,
-			List<Application> applications, double thresholdProcessPower) {
+			List<Application> applications, double thresholdProcessPower, double thresholdSolutionEvaluationImprovement,
+			double thresholdDifferenceSolutions) {
+		super();
 		this.setFogDevices(fogDevices);
 //		this.setApplication(application);
 		this.setModuleToDeviceMap(new HashMap<>());
@@ -75,10 +95,14 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		this.setActuators(actuators);
 		this.setDeviceToModuleMap(new HashMap<>());
 		this.setApplications(applications);
+		this.thresholdProcessPower = thresholdProcessPower;
+		this.thresholdSolutionEvaluationImprovement = thresholdSolutionEvaluationImprovement;
+		this.thresholdDifferenceSolutions = thresholdDifferenceSolutions;
 
+		this.mapModules();
 	}
 
-	protected double thresholdProcessPower;
+	protected double thresholdProcessPower, thresholdSolutionEvaluationImprovement, thresholdDifferenceSolutions;
 	protected List<Sensor> sensors;
 	protected List<Actuator> actuators;
 	protected Map<Integer, List<AppModule>> deviceToModuleMap;
@@ -99,12 +123,22 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		return deviceToModuleMap;
 	}
 
+	public List<Application> getApplications() {
+		return applications;
+	}
+
+	/**
+	 * Should be a value between 0 and 1
+	 */
 	public double getThresholdProcessPower() {
 		return thresholdProcessPower;
 	}
 
-	public List<Application> getApplications() {
-		return applications;
+	/**
+	 * Should be a value between 0 and 1 .
+	 */
+	public double getThresholdDifferenceSolutions() {
+		return thresholdDifferenceSolutions;
 	}
 
 	//
@@ -143,9 +177,7 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		ap = deadlineAwareEnergyEfficientApplicationPlacement();
 		solution = ap.solutionModulesDeployed;
 
-		if (solution == null) {
-			return;
-		}
+		Objects.requireNonNull(solution);
 
 		mapModuleDevice = new HashMap<>();
 		solution.getPieces().forEach(p -> {
@@ -201,9 +233,7 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		Application app;
 
 		solution = modulePlacement(MAX_ITERATIONS);
-		if (solution == null) {
-			return null;
-		}
+		Objects.requireNonNull(solution, "SOLUTION NULL IN DEADLINE AWARE ENERGU EFFICIENT APPLICATION PLACEMENT");
 
 		ap = new ApplicationsPlacements();
 		ap.setSolutionModulesDeployed(solution);
@@ -237,14 +267,18 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 	}
 
 	protected SolutionModulesDeployed modulePlacement(int maxIterations) {
+		boolean improvedEnough, diverseEnought;
+		double lastEvaluation, evaluation;
+		long difference, maxDifference;
 		Random r;
 		HeuristicFog h;
-		r = new Random();
-		SolutionMutatorFog mutator;
+		SolutionMutatorFog<SolutionModulesDeployed> mutator;
 		final Map<String, Application> mapAppl;
-		final Map<String, AppModule> mapMod;
+		final Map<String, AppModule> mapMod; // temporary variable
 		List<AppModule> modules;
+		SolutionModulesDeployed solution, prevSolution;
 
+		r = new Random();
 		mapAppl = new HashMap<>();
 		mapMod = new HashMap<>();
 
@@ -260,13 +294,45 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		});
 		mapMod.clear();
 
-		mutator = new SolutionMutatorFog();
-		mutator.resetEvolutionEnvironment(mapAppl, modules, getFogDevices());
+		mutator = new SolutionMutatorFog<>();
+		solution = prevSolution = null;
+		lastEvaluation = 0.0;
 		h = ALL_HEURISTICS[r.nextInt(ALL_HEURISTICS.length)].newInstance(mapAppl, modules, getFogDevices(), mutator);
+		do {
+			mutator.resetContext(mapAppl, modules, getFogDevices());
 
-		return h.optimize(
-				org.fog.heuristics.fogImplementations.Utils.newRandomSolution(mapAppl, modules, getFogDevices(), r),
-				maxIterations);
+			solution = h.optimize(solution, maxIterations, r);
+			evaluation = SolutionsProducerEvaluator.evaluateSolution(solution, mapAppl);
+
+			improvedEnough = (Math.abs(lastEvaluation - evaluation)
+					/ lastEvaluation) > thresholdSolutionEvaluationImprovement;
+
+			maxDifference = Math.max(solution.getPieces().size(),
+					(prevSolution == null ? 0 : prevSolution.getPieces().size()));
+
+			difference = SolutionsProducerEvaluator.evaluateDifference(solution, prevSolution);
+			diverseEnought = (((double) difference) / ((double) maxDifference)) <= thresholdDifferenceSolutions;
+
+			lastEvaluation = evaluation;
+			if (govern(h, improvedEnough, diverseEnought)) {
+				h = ALL_HEURISTICS[r.nextInt(ALL_HEURISTICS.length)].newInstance(mapAppl, modules, getFogDevices(),
+						mutator);
+
+				// fine tune??
+				prevSolution = solution;
+				solution = h.optimize(solution, maxIterations, r);
+			} else {
+				prevSolution = solution;
+			}
+		} while (improvedEnough && maxIterations-- > 0);
+		return solution;
+	}
+
+	protected boolean govern(HeuristicFog h, boolean improvedEnough, boolean diverseEnought) {
+		HeuristicType ht;
+		ht = h.getHeuristicType();
+		return !((ht == HeuristicType.SingleSolution && improvedEnough)
+				|| (ht == HeuristicType.PopulationBased && improvedEnough && diverseEnought));
 	}
 
 	//
@@ -303,5 +369,21 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		public void setSolutionModulesDeployed(SolutionModulesDeployed solutionModulesDeployed) {
 			this.solutionModulesDeployed = solutionModulesDeployed;
 		}
+
+		@Override
+		public String toString() {
+			final StringBuilder sb;
+			sb = new StringBuilder(1024);
+
+			sb.append("ApplicationsPlacements [highCostQueue=").append(highCostQueue.size()).append(", lowCostQueue=")
+					.append(lowCostQueue.size()).append(", sensorsActuatorsQueue=").append(sensorsActuatorsQueue.size())
+					.append(", solutionModulesDeployed=\n\t");
+
+			solutionModulesDeployed.getPieces().forEach(p -> sb.append("\n\t").append(p.toString()));
+			sb.append("\n]");
+
+			return sb.toString();
+		}
+
 	}
 }

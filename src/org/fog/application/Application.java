@@ -49,6 +49,7 @@ public class Application {
 
 	protected int deadlineMilliseconds = 0;
 	protected int deploymentTimeMilliseconds = 0;
+	protected boolean isDelayTolerable;
 
 	/**
 	 * Creates a plain vanilla application with no modules and edges.
@@ -197,6 +198,7 @@ public class Application {
 		setGeoCoverage(null);
 		setLoops(new ArrayList<AppLoop>());
 		setEdgeMap(new HashMap<String, AppEdge>());
+		this.setDelayTolerable(false);
 	}
 
 	public Application(String appId, List<AppModule> modules, List<AppEdge> edges, List<AppLoop> loops,
@@ -207,6 +209,7 @@ public class Application {
 		setGeoCoverage(geoCoverage);
 		setLoops(loops);
 		setEdgeMap(new HashMap<String, AppEdge>());
+		this.setDelayTolerable(false);
 		for (AppEdge edge : edges) {
 			getEdgeMap().put(edge.getTupleType(), edge);
 		}
@@ -451,5 +454,16 @@ public class Application {
 
 	public void setDeploymentTimeMilliseconds(int deploymentTimeMilliseconds) {
 		this.deploymentTimeMilliseconds = deploymentTimeMilliseconds;
+	}
+
+	/**
+	 * Tells whether the application can tolerate delays. Defaults to {@code false}.
+	 */
+	public boolean isDelayTolerable() {
+		return isDelayTolerable;
+	}
+
+	public void setDelayTolerable(boolean isDelayTolerable) {
+		this.isDelayTolerable = isDelayTolerable;
 	}
 }

@@ -2,6 +2,7 @@ package org.fog.heuristics.fogImplementations;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.fog.heuristics.Heuristic;
 import org.fog.placement.ModulePlacement;
@@ -12,44 +13,23 @@ import org.fog.placement.ModulePlacement;
  * {@link ModulePlacement} has to provide and use.<br>
  * That's a
  */
-public class SolutionModulesDeployed implements Serializable {
-	private static final long serialVersionUID = 1L;
-//protected AppModule moduleToDepoy;
-//protected Application applicationOfTheModule;
-//protected  FogDevice 
+public interface SolutionModulesDeployed extends Serializable, Supplier<List<PieceOfSolution>> {
 
-	public SolutionModulesDeployed() {
-		super();
+//	public SolutionModulesDeployed() {super();}
+//
+//	public SolutionModulesDeployed(List<PieceOfSolution> pieces) {
+//		this();
+//		this.setPieces(pieces);
+//	}
+//
+//	protected List<PieceOfSolution> pieces;
+
+	@Override
+	public default List<PieceOfSolution> get() {
+		return this.getPieces();
 	}
 
-	public SolutionModulesDeployed(List<PieceOfSolution> pieces) {
-		this();
-		this.setPieces(pieces);
-	}
+	public List<PieceOfSolution> getPieces();
 
-	protected List<PieceOfSolution> pieces;
-
-	public List<PieceOfSolution> getPieces() {
-		return pieces;
-	}
-
-	public void setPieces(List<PieceOfSolution> pieces) {
-		this.pieces = pieces;
-	}
-
-	//
-
-	/*
-	 * protected static interface EffectiveAdderPieceOfSolution{ public void
-	 * addEffectively(PieceOfSolution pos); } protected static class MapAligned<A,B>
-	 * extends TreeMap<A,B> implements EffectiveAdderPieceOfSolution{ private static
-	 * final long serialVersionUID = -650425400520L;
-	 * 
-	 * @Override public void addEffectively(PieceOfSolution pos) { // TODO
-	 * Auto-generated method stub
-	 * 
-	 * }
-	 * 
-	 * }
-	 */
+	public void setPieces(List<PieceOfSolution> pieces);
 }

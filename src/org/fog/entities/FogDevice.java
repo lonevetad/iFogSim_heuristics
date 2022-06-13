@@ -111,10 +111,25 @@ public class FogDevice extends PowerDatacenter {
 											// busy
 	protected double clusterLinkBandwidth;
 
+	protected DeviceNodeType deviceNodeType;
+
 	public FogDevice(String name, FogDeviceCharacteristics characteristics, VmAllocationPolicy vmAllocationPolicy,
 			List<Storage> storageList, double schedulingInterval, double uplinkBandwidth, double downlinkBandwidth,
 			double uplinkLatency, double ratePerMips) throws Exception {
+		this(name, null, characteristics, vmAllocationPolicy, storageList, schedulingInterval, uplinkBandwidth,
+				downlinkBandwidth, uplinkLatency, ratePerMips);
+	}
+
+	public FogDevice(String name, DeviceNodeType nodeType, FogDeviceCharacteristics characteristics,
+			VmAllocationPolicy vmAllocationPolicy, List<Storage> storageList, double schedulingInterval,
+			double uplinkBandwidth, double downlinkBandwidth, double uplinkLatency, double ratePerMips)
+			throws Exception {
 		super(name, characteristics, vmAllocationPolicy, storageList, schedulingInterval);
+		if (nodeType == null) {
+			this.resetDeviceNodeTypeToEsteem();
+		} else {
+			this.deviceNodeType = nodeType;
+		}
 		setCharacteristics(characteristics);
 		setVmAllocationPolicy(vmAllocationPolicy);
 		setLastProcessTime(0.0);
@@ -165,7 +180,17 @@ public class FogDevice extends PowerDatacenter {
 
 	public FogDevice(String name, long mips, int ram, double uplinkBandwidth, double downlinkBandwidth,
 			double ratePerMips, PowerModel powerModel) throws Exception {
+		this(name, null, mips, ram, uplinkBandwidth, downlinkBandwidth, ratePerMips, powerModel);
+	}
+
+	public FogDevice(String name, DeviceNodeType nodeType, long mips, int ram, double uplinkBandwidth,
+			double downlinkBandwidth, double ratePerMips, PowerModel powerModel) throws Exception {
 		super(name, null, null, new LinkedList<Storage>(), 0);
+		if (nodeType == null) {
+			this.resetDeviceNodeTypeToEsteem();
+		} else {
+			this.deviceNodeType = nodeType;
+		}
 
 		List<Pe> peList = new ArrayList<Pe>();
 
@@ -842,6 +867,7 @@ public class FogDevice extends PowerDatacenter {
 	protected void initializePeriodicTuples(AppModule module) {
 		String appId = module.getAppId();
 		Application app = getApplicationMap().get(appId);
+
 		List<AppEdge> periodicEdges = app.getPeriodicEdges(module.getName());
 		for (AppEdge edge : periodicEdges) {
 			send(getId(), edge.getPeriodicity(), FogEvents.SEND_PERIODIC_TUPLE, edge);
@@ -1055,6 +1081,10 @@ public class FogDevice extends PowerDatacenter {
 		this.level = level;
 	}
 
+	/**
+	 * Returns the cost rate per "Mips" used". The unit mesure is unknown, the user
+	 * can freely set it.
+	 */
 	public double getRatePerMips() {
 		return ratePerMips;
 	}
@@ -1182,6 +1212,22 @@ public class FogDevice extends PowerDatacenter {
 	}
 
 	public DeviceNodeType getDeviceNodeType() {
+		if (this.deviceNodeType == null) {
+			this.resetDeviceNodeTypeToEsteem();
+		}
+		return this.deviceNodeType;
+	}
+
+	protected void resetDeviceNodeTypeToEsteem() {
+		this.deviceNodeType = this.estimateDeviceNodeType();
+	}
+
+	/**
+	 * Get an esteem of what this device type should be.<br>
+	 * It takes into account the level ({@link #getLevel()}) and the name
+	 * ({@link #getName()})
+	 */
+	public DeviceNodeType estimateDeviceNodeType() {
 		// 0 == cloud ; 1 == proxy / server .. usually
 		if (this.getLevel() <= 0 || parentId < 0 || getName().contains("cloud")) {
 			return DeviceNodeType.CloudNode;
