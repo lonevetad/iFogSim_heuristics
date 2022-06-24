@@ -4,6 +4,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
 
+/**
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ *
+ * @param <FragmentOfSolution>
+ * @param <Sol>
+ */
 public interface SolutionMutator<FragmentOfSolution, Sol extends Supplier<List<FragmentOfSolution>>> {
 
 	/**

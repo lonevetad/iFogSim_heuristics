@@ -14,45 +14,48 @@ import org.fog.heuristics.SolutionsProducerEvaluator;
 import org.fog.heuristics.SolutionsProducerEvaluator.SolutionDeployCosts;
 import org.fog.heuristics.algorithms.ga.GeneticAlgorithm;
 import org.fog.heuristics.fogImplementations.HeuristicFog;
-import org.fog.heuristics.fogImplementations.ListDevices;
+import org.fog.heuristics.fogImplementations.ModulePlacementAdditionalInformationFog;
 import org.fog.heuristics.fogImplementations.PieceOfSolution;
 import org.fog.heuristics.fogImplementations.SolutionModulesDeployed;
 import org.fog.heuristics.fogImplementations.SolutionMutatorFog;
 
-public class GeneticAlgorithmFog implements HeuristicFog
-//extends GeneticAlgorithm<PieceOfSolution, ChromosomeFog>
-{
-	public GeneticAlgorithmFog(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-			List<FogDevice> devices) {
-		this.ga = new GeneticAlgorithmDelegated(50, 10, 0.02, modules, devices, applicationsSubmitted);
-		this.setApplicationsSubmitted(applicationsSubmitted);
-		this.setModules(modules);
-		this.setDevices(devices);
-		this.crossoverRate = 0.5;
-		this.elitism = 0.2;
-	}
-
-	public GeneticAlgorithmFog(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-			List<FogDevice> devices, SolutionMutatorFog<ChromosomeFog> mutationProvider) {
-//		SolutionMutatorFog<S> mutationProvider
-		this(applicationsSubmitted, modules, devices);
-		if (mutationProvider != null) {
-			this.setMutationProvider(mutationProvider);
-		}
-//		super(mutationProvider);
-	}
+/**
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ *
+ */
+public class GeneticAlgorithmFog implements HeuristicFog {
 
 	public final double crossoverRate, elitism;
 	protected final GeneticAlgorithmDelegated ga;
 
+	public GeneticAlgorithmFog(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		this.ga = new GeneticAlgorithmDelegated(50, 10, 0.02, modPlacementAdditionalInfo);
+		this.crossoverRate = 0.5;
+		this.elitism = 0.2;
+	}
+
+	public GeneticAlgorithmFog(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo,
+			SolutionMutatorFog<ChromosomeFog> mutationProvider) {
+		this(modPlacementAdditionalInfo);
+		if (mutationProvider != null) {
+			this.setMutationProvider(mutationProvider);
+		}
+	}
+
 	//
 
+	@Override
+	public ModulePlacementAdditionalInformationFog getModPlacementAdditionalInfo() {
+		return this.ga.getModPlacementAdditionalInfo();
+	}
+
 	public List<AppModule> getModules() {
-		return ga.modules;
+		return ga.getModules();
 	}
 
 	public List<FogDevice> getDevices() {
-		return ga.devices;
+		return ga.getDevices();
 	}
 
 	public double getProbabilityMutation() {
@@ -64,7 +67,7 @@ public class GeneticAlgorithmFog implements HeuristicFog
 	}
 
 	public Map<String, Application> getApplicationsSubmitted() {
-		return this.ga.applicationsSubmitted;
+		return this.ga.getApplicationsSubmitted();
 	}
 
 	@Override
@@ -92,6 +95,14 @@ public class GeneticAlgorithmFog implements HeuristicFog
 
 	public void setMutationProvider(SolutionMutator<PieceOfSolution, ChromosomeFog> mutator) {
 		this.ga.setMutationProvider(mutator);
+	}
+
+	/**
+	 * @param modPlacementAdditionalInfo the modPlacementAdditionalInfo to set
+	 */
+	@Override
+	public void setModPlacementAdditionalInfo(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		this.ga.setModPlacementAdditionalInfo(modPlacementAdditionalInfo);
 	}
 
 	//
@@ -133,20 +144,15 @@ public class GeneticAlgorithmFog implements HeuristicFog
 	public static class GeneticAlgorithmDelegated extends GeneticAlgorithm<PieceOfSolution, ChromosomeFog> {
 		public final int populationSize, maxGenerations;
 		protected double mutationRate;
-		protected List<AppModule> modules;
-		protected List<FogDevice> devices;
-		protected Map<String, Application> applicationsSubmitted;
-		protected ListDevices[] devicesPartitions;
+		protected ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo;
 
 		public GeneticAlgorithmDelegated(int populationSize, int maxGenerations, double mutationRate,
-				List<AppModule> modules, List<FogDevice> devices, Map<String, Application> applicationsSubmitted) {
+				ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
 			super(new SolutionMutatorFog<>());
 			this.populationSize = populationSize;
 			this.maxGenerations = maxGenerations;
 			this.mutationRate = mutationRate;
-			this.modules = modules;
-			this.setDevices(devices);
-			this.applicationsSubmitted = applicationsSubmitted;
+			this.modPlacementAdditionalInfo = modPlacementAdditionalInfo;
 		}
 
 		public SolutionMutatorFog<ChromosomeFog> getSolutionMutatorFog() {
@@ -156,11 +162,11 @@ public class GeneticAlgorithmFog implements HeuristicFog
 		//
 
 		public List<AppModule> getModules() {
-			return modules;
+			return this.modPlacementAdditionalInfo.getModules();
 		}
 
 		public List<FogDevice> getDevices() {
-			return devices;
+			return this.modPlacementAdditionalInfo.getDevices();
 		}
 
 		@Override
@@ -169,22 +175,21 @@ public class GeneticAlgorithmFog implements HeuristicFog
 		}
 
 		public Map<String, Application> getApplicationsSubmitted() {
-			return applicationsSubmitted;
+			return this.modPlacementAdditionalInfo.getApplicationsByID();
 		}
 
 		//
 
 		public void setModules(List<AppModule> modules) {
-			this.modules = modules;
+			this.modPlacementAdditionalInfo.setModules(modules);
 		}
 
 		public void setDevices(List<FogDevice> devices) {
-			this.devices = devices;
-			this.devicesPartitions = SolutionsProducerEvaluator.partitionateDevicesByType(devices);
+			this.modPlacementAdditionalInfo.setDevices(devices);
 		}
 
 		public void setApplicationsSubmitted(Map<String, Application> applicationsSubmitted) {
-			this.applicationsSubmitted = applicationsSubmitted;
+			this.modPlacementAdditionalInfo.setApplicationsByID(applicationsSubmitted);
 		}
 
 		@Override
@@ -194,15 +199,29 @@ public class GeneticAlgorithmFog implements HeuristicFog
 
 		//
 
+		/**
+		 * @return the modPlacementAdditionalInfo
+		 */
+		public ModulePlacementAdditionalInformationFog getModPlacementAdditionalInfo() {
+			return modPlacementAdditionalInfo;
+		}
+
+		/**
+		 * @param modPlacementAdditionalInfo the modPlacementAdditionalInfo to set
+		 */
+		public void setModPlacementAdditionalInfo(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+			this.modPlacementAdditionalInfo = modPlacementAdditionalInfo;
+		}
+
 		@Override
 		public double evaluateSolution(ChromosomeFog solution) {
-			return SolutionsProducerEvaluator.evaluateSolution(solution, applicationsSubmitted);
+			return SolutionsProducerEvaluator.evaluateSolution(solution, this.getModPlacementAdditionalInfo());
 		}
 
 		@Override
 		public ChromosomeFog optimize(ChromosomeFog initialGuess, int maxIterations, Random r) {
-			this.getSolutionMutatorFog().resetContext(getApplicationsSubmitted(), getModules(), getDevices(),
-					this.devicesPartitions);
+//			this.getSolutionMutatorFog().resetContext(getApplicationsSubmitted(), getModules(), getDevices(),
+//					this.modPlacementAdditionalInfo.getDevicesPartitions());
 			return super.optimize(initialGuess, maxIterations, r);
 		}
 
@@ -222,10 +241,11 @@ public class GeneticAlgorithmFog implements HeuristicFog
 
 			while (--chrToGenerate >= 0) {
 				Pair<ChromosomeFog, SolutionDeployCosts<ChromosomeFog>> p;
-				attemptsLeft = 10;
+				attemptsLeft = 16;
 				do {
-					p = SolutionsProducerEvaluator.newRandomSolution(applicationsSubmitted, this.modules, this.devices,
-							r, ChromosomeFog::new);
+					p = SolutionsProducerEvaluator.newRandomSolution(getApplicationsSubmitted(), this.getModules(),
+							this.getDevices(), r, modPlacementAdditionalInfo.getDevicesPartitions(),
+							ChromosomeFog::new);
 				} while (p == null && (attemptsLeft-- > 0));
 				if (p != null) {
 					population.add(p.getFirst());

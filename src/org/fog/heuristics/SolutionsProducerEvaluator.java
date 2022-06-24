@@ -22,6 +22,7 @@ import org.fog.entities.FogDevice;
 import org.fog.entities.FogDevice.DeviceNodeType;
 import org.fog.heuristics.Utils.EditCosts;
 import org.fog.heuristics.fogImplementations.ListDevices;
+import org.fog.heuristics.fogImplementations.ModulePlacementAdditionalInformationFog;
 import org.fog.heuristics.fogImplementations.PieceOfSolution;
 import org.fog.heuristics.fogImplementations.SolutionModulesDeployed;
 
@@ -162,31 +163,32 @@ public class SolutionsProducerEvaluator {
 	 * @param appsByID given to provide context to the {@link AppModule} and the
 	 *                 internal calculations
 	 */
-	public static double evaluateSolution(SolutionModulesDeployed solution, Map<String, Application> appsByID) {
-		double evaluation, respTime;
-		AppModule m;
-		FogDevice d;
-		Application app;
+	public static double evaluateSolution(SolutionModulesDeployed solution,
+			ModulePlacementAdditionalInformationFog additionalInfo) {
+		final Map<String, Map<String, AppModule>> modulesAssociatedToEachDevice;
 
 		if (solution == null || solution.getPieces() == null) {
 			return 0.0;
 		}
-		evaluation = 0.0;
-		for (PieceOfSolution pos : solution.getPieces()) {
-			m = pos.getModule();
-			d = pos.getDevice();
-			app = appsByID.get(m.getAppId());
-			if (app != null) {
-				respTime = responseTime(m, d, app);
 
-				evaluation += respTime;
-				// idle power et similia will be calculated in the global calculation below
-//						+ energyConsumption(m, d, app);
+		/**
+		 * just collecting the associations in order to not compute it again and again
+		 * in "responseTime" code
+		 */
+		modulesAssociatedToEachDevice = new HashMap<>();
+		for (PieceOfSolution pos : solution.getPieces()) {
+			Map<String, AppModule> modules;
+			if (modulesAssociatedToEachDevice.containsKey(pos.getDevice().getName())) {
+				modules = modulesAssociatedToEachDevice.get(pos.getDevice().getName());
+			} else {
+				modules = new HashMap<>();
+				modulesAssociatedToEachDevice.put(pos.getDevice().getName(), modules);
 			}
+			modules.put(pos.getModule().getName(), pos.getModule());
 		}
 
-		evaluation += energyConsumptionWholeSolution(solution, appsByID);
-		return evaluation;
+		return responseTime(solution, modulesAssociatedToEachDevice, additionalInfo)
+				+ energyConsumptionWholeSolution(solution, additionalInfo.getApplicationsByID());
 	}
 
 	@Deprecated
@@ -231,51 +233,136 @@ public class SolutionsProducerEvaluator {
 		return getExpectedModuleMillionOfIstructionsToExec(module, app) / device.getHost().getAvailableMips();
 	}
 
-	public static double responseTime(AppModule module, FogDevice device, Application app) {
+	public static double responseTime(SolutionModulesDeployed solution,
+			final Map<String, Map<String, AppModule>> modulesAssociatedToEachDevice,
+			ModulePlacementAdditionalInformationFog additionalInfo) {
+		boolean hasModuleOnDevice = false; // called "fn" in the paper
+		double time = 0.0, totalDept, totalDeployment;
+		Application app;
+		AppModule m;
+		Map<String, FogDevice> mapDeviceAssociatedToEachModule;
+		Map<String, AppModule> mapModulesAssociatedToDevice;
+
+		mapDeviceAssociatedToEachModule = new HashMap<>();
+
+		for (PieceOfSolution pos : solution.getPieces()) {
+			m = pos.getModule();
+			mapDeviceAssociatedToEachModule.put(m.getName(), pos.getDevice());
+
+			app = additionalInfo.getApplicationsByID().get(m.getAppId());
+			if (app != null) {
+				time += responseTimeModule(m, pos.getDevice(), app, solution, modulesAssociatedToEachDevice,
+						additionalInfo);
+			}
+		}
+
+		totalDeployment = 0.0;
+
+		for (Entry<String, Application> eApp : additionalInfo.getApplicationsByID().entrySet()) {
+			app = eApp.getValue();
+
+			// TODO how to compute it?
+			totalDept = additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogNode,
+					DeviceNodeType.FogControllerNode);
+
+			/*
+			 * looking for: "If the neighboring controller node has at least one application
+			 * module of n th application propagated then F(n) = 1", i.e. then add
+			 * propagation delay and expected deployment delay
+			 * 
+			 */
+			hasModuleOnDevice = false;
+			for (String moduleName : app.getModuleNames()) {
+				for (Entry<String, Map<String, AppModule>> e : modulesAssociatedToEachDevice.entrySet()) {
+					mapModulesAssociatedToDevice = e.getValue();
+
+					hasModuleOnDevice = mapModulesAssociatedToDevice.containsKey(moduleName);
+					if (hasModuleOnDevice) {
+						break;
+					}
+				}
+				if (hasModuleOnDevice) {
+					break;
+				}
+			}
+
+			if (hasModuleOnDevice) {
+				double delayPropagation;
+				delayPropagation = 0.0;
+
+//				for (AppModule m: app.getModules()) {
+//					FogDevice d, parent;
+//					DeviceNodeType type;
+//					String moduleName 
+//
+//					moduleName = m.getName();
+//					d = mapDeviceAssociatedToEachModule.get(moduleName);
+//
+//					// TODO do I need to use something like (FogDevice)CloudSim.getEntity(fogDeviceId) 
+//
+//					// crawl
+//					// delayPropagation += ...
+//				}
+				delayPropagation = additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogControllerNode,
+						DeviceNodeType.NeighboringFogControllerNode) //
+						* app.getModules().size();
+
+				// sum the delay of each module from a controller node to the device it is
+				// placed on
+				totalDept += delayPropagation + app.getDeploymentTimeMilliseconds();
+			}
+
+			totalDeployment += totalDept;
+		}
+		return time + totalDeployment;
+	}
+
+	public static double responseTimeModule(AppModule module, FogDevice device, Application app,
+			SolutionModulesDeployed solution, final Map<String, Map<String, AppModule>> modulesAssociatedToEachDevice,
+			ModulePlacementAdditionalInformationFog additionalInfo) {
 		boolean isInFog, isInNbr, isInController, isInCloud;
-		double mkspanTime, executionTime, distFog, distNbr, distController, distCloud;
+		double mkspanTimePartial, executionTime, distFog, distNbr, distController, distCloud;
 		DeviceNodeType dt;
 		// note: all variables name are taken from the article
 
-		mkspanTime = 0.0;
+		mkspanTimePartial = 0.0;
 		executionTime = 0.0;
 		isInFog = isInNbr = isInController = isInCloud = false;
 		distFog = distNbr = distController = distCloud = 0.0;
 
 		// TODO: how to get those values?
 
-		// draft 1 : just adding up everything available
-//		for (double[] moduleNodeCapacity : resourcesMetricsPairs(module, device)) {
-//			if (moduleNodeCapacity[1] > 0.0) {
-//				executionTime += moduleNodeCapacity[0] / moduleNodeCapacity[1];
-//			}
-//		}
-
-		// draft 2
-//		executionTime = executionTime(module, device, app);
-
-		// draft 3
+		// draft 3 : a.k.a. "module capacity / node capacity"
 		executionTime = module.getMips() / device.getHost().getAvailableMips();
 
-		mkspanTime = executionTime;
+		mkspanTimePartial = executionTime;
 
+		// calculation of "Comm_dept"
 		dt = device.getDeviceNodeType();
 		switch (dt) {
 		case CloudNode:
 			isInCloud = true;
-			distCloud = 0; // device.get
+			distCloud = additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogNode,
+					DeviceNodeType.FogControllerNode) //
+					+ additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogControllerNode,
+							DeviceNodeType.NeighboringFogControllerNode) //
+					+ additionalInfo.getLatencyBetweenDevices(DeviceNodeType.NeighboringFogControllerNode,
+							DeviceNodeType.CloudNode);
 			break;
 		case FogControllerNode:
 			isInController = true;
-			distController = 0; // I'm already there!
+			distController = additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogNode,
+					DeviceNodeType.FogControllerNode);
 			break;
 		case FogNode:
 			isInFog = true;
-			distFog = device.getUplinkLatency();
+			distFog = additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogControllerNode, DeviceNodeType.FogNode);
 			break;
 		case NeighboringFogControllerNode:
 			isInNbr = true;
-			distNbr = device.getUplinkLatency();
+			distNbr = additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogNode, DeviceNodeType.FogControllerNode) //
+					+ additionalInfo.getLatencyBetweenDevices(DeviceNodeType.FogControllerNode,
+							DeviceNodeType.NeighboringFogControllerNode);
 			break;
 		default:
 			break;
@@ -286,21 +373,19 @@ public class SolutionsProducerEvaluator {
 		 */
 
 		if (isInFog) {
-			mkspanTime += distFog;
+			mkspanTimePartial += distFog;
 		}
 		if (isInNbr) {
-			mkspanTime += distNbr * 2.0;
+			mkspanTimePartial += distNbr * 2.0;
 		}
 		if (isInController) {
-			mkspanTime += distController;
+			mkspanTimePartial += distController;
 		}
 		if (isInCloud) {
-			mkspanTime += distCloud * 2.0;
+			mkspanTimePartial += distCloud * 2.0;
 		}
 
-		//
-
-		return mkspanTime;
+		return mkspanTimePartial;
 	}
 
 	public static double energyConsumptionWholeSolution(SolutionModulesDeployed solution,
@@ -343,6 +428,16 @@ public class SolutionsProducerEvaluator {
 		return accumulator;
 	}
 
+	/**
+	 * It's the original definition, coming from the paper.
+	 * 
+	 * @param m
+	 * @param d
+	 * @param app
+	 * @return
+	 * 
+	 * @deprecated because some calculation formulas are missing
+	 */
 	@Deprecated
 	public static double energyConsumption(AppModule m, FogDevice d, Application app) {
 		double energyNode, energyModule, efn, efcn, enfcn, ecn;
@@ -362,6 +457,7 @@ public class SolutionsProducerEvaluator {
 				((energyNode = powerHost.getAvailableMips()) == 0.0 ? 0.0 : ( //
 				m.getMips() / energyNode)));
 
+		// TODO how to calculate each terms of this sum?
 		energyModule = efn + efcn + enfcn + ecn;
 
 		return energyNode + energyModule;
@@ -404,6 +500,7 @@ public class SolutionsProducerEvaluator {
 		List<PieceOfSolution> pieces;
 		final List<FogDevice> nonFogNodes;
 		final SolutionDeployCosts<S> cumulatedCostsEachDevice; // on each device
+		S solution;
 
 		Objects.requireNonNull(solutionFactory);
 
@@ -451,7 +548,9 @@ public class SolutionsProducerEvaluator {
 			return null;
 		}
 
-		return new Pair<>(solutionFactory.apply(pieces), cumulatedCostsEachDevice);
+		solution = solutionFactory.apply(pieces);
+		cumulatedCostsEachDevice.setSolution(solution);
+		return new Pair<>(solution, cumulatedCostsEachDevice);
 	}
 
 	public static ListDevices[] partitionateDevicesByType(List<FogDevice> devices) {
@@ -964,6 +1063,10 @@ public class SolutionsProducerEvaluator {
 		}
 	}
 
+	//
+
+	//
+
 	public static class SolutionDeployCosts<S extends SolutionModulesDeployed> {
 		protected final Map<String, CumulatedCostsOnDevice> cumulatedCostsEachDevice;
 		protected S solution;
@@ -985,6 +1088,24 @@ public class SolutionsProducerEvaluator {
 		public S getSolution() {
 			return solution;
 		}
+
+		/**
+		 * @param solution the solution to set
+		 */
+		public void setSolution(S solution) {
+			this.solution = solution;
+		}
+
+//		public void resetCosts(S solution) {
+//			this.cumulatedCostsEachDevice.clear();
+//			this.solution = solution;
+//			for(PieceOfSolution pos:this.solution.get()) {
+//				CumulatedCostsOnDevice cc;
+//				cc =new CumulatedCostsOnDevice(pos.getDevice());
+//				cc.accumulateCostsOf(mod, app); // TODO HOW TO DO IT?
+//				this.addCumulatedCosts(cc);
+//			}
+//		}
 
 		public CumulatedCostsOnDevice getCumulatedCosts(FogDevice device) {
 			String deviceName;

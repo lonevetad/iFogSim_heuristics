@@ -4,6 +4,11 @@ import java.util.Random;
 
 import org.fog.heuristics.algorithms.ga.GeneticAlgorithm;
 
+/**
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ * 
+ */
 public interface Heuristic<T> {
 	public static enum HeuristicType {
 		SingleSolution, PopulationBased;

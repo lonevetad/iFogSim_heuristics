@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.BiConsumer;
 
 import org.fog.application.AppModule;
 import org.fog.application.Application;
@@ -22,6 +23,9 @@ import org.fog.heuristics.algorithms.ga.GeneticAlgorithm;
  * <p>
  * Beware: its' NOT synchronized! Different instances must be created in order
  * to not mess up the results!
+ * <p>
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
  */
 public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements SolutionMutator<PieceOfSolution, S> {
 
@@ -33,10 +37,7 @@ public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements So
 				this.costsSolutions.get(solutionContext), null);
 	}
 
-	protected Map<String, Application> applicationsSubmitted;
-	protected List<AppModule> modules;
-	protected List<FogDevice> devices;
-	protected ListDevices[] devicesPartitions;
+	protected ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo;
 	protected Map<S, SolutionDeployCosts<S>> costsSolutions;
 
 	public SolutionMutatorFog() {
@@ -44,34 +45,31 @@ public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements So
 		this.costsSolutions = new HashMap<>();
 	}
 
-	public void resetContext(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-			List<FogDevice> devices) {
-		resetContext(applicationsSubmitted, modules, devices,
-				SolutionsProducerEvaluator.partitionateDevicesByType(devices));
+	public void resetContext(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		this.modPlacementAdditionalInfo = modPlacementAdditionalInfo;
 	}
 
-	public void resetContext(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-			List<FogDevice> devices, ListDevices[] devicesPartitions) {
-		this.applicationsSubmitted = applicationsSubmitted;
-		this.modules = modules;
-		this.devices = devices;
-		this.devicesPartitions = devicesPartitions;
+	/**
+	 * @return the costsSolutions
+	 */
+	public Map<S, SolutionDeployCosts<S>> getCostsSolutions() {
+		return costsSolutions;
 	}
 
 	public Map<String, Application> getApplicationsSubmitted() {
-		return applicationsSubmitted;
+		return this.modPlacementAdditionalInfo.getApplicationsByID();
 	}
 
 	public List<AppModule> getModules() {
-		return modules;
+		return this.modPlacementAdditionalInfo.getModules();
 	}
 
 	public List<FogDevice> getDevices() {
-		return devices;
+		return this.modPlacementAdditionalInfo.getDevices();
 	}
 
 	public ListDevices[] getDevicesPartitions() {
-		return devicesPartitions;
+		return this.modPlacementAdditionalInfo.getDevicesPartitions();
 	}
 
 	//
@@ -82,5 +80,21 @@ public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements So
 	 */
 	public void saveSolutionCostsInCache(S solution, SolutionDeployCosts<S> costs) {
 		this.costsSolutions.put(solution, costs);
+	}
+
+	public boolean hasSolutionCost(S solution) {
+		return this.costsSolutions.containsKey(solution);
+	}
+
+	public SolutionDeployCosts<S> getCostSolution(S solution) {
+		return this.costsSolutions.get(solution);
+	}
+
+	public void removeCostSolution(S solution) {
+		this.costsSolutions.remove(solution);
+	}
+
+	public void forEachCostSolution(BiConsumer<S, SolutionDeployCosts<S>> action) {
+		this.costsSolutions.forEach(action);
 	}
 }

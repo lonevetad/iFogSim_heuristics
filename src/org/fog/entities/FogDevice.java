@@ -969,10 +969,21 @@ public class FogDevice extends PowerDatacenter {
 		this.uplinkBandwidth = uplinkBandwidth;
 	}
 
+	/**
+	 * May be used to calculate the total time required to send an {@link AppModule}
+	 * from an entry device (like a mobile phone or a
+	 * {@link DeviceNodeType#FogControllerNode}) to this specific fog device or to a
+	 * {@link DeviceNodeType#CloudNode}.
+	 */
 	public double getUplinkLatency() {
 		return uplinkLatency;
 	}
 
+	/**
+	 * See {@link #getUplinkLatency()}.
+	 * 
+	 * @param uplinkLatency
+	 */
 	public void setUplinkLatency(double uplinkLatency) {
 		this.uplinkLatency = uplinkLatency;
 	}

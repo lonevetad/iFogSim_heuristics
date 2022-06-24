@@ -29,6 +29,10 @@ public class AppModule extends PowerVm {
 		Physical, Software
 	}
 
+	public static enum ModulePlacementPolicy {
+		SensorsOnly, NonSensorsOnly, Anything
+	}
+
 	private String name;
 	private String appId;
 	private Map<Pair<String, String>, SelectivityModel> selectivityMap;

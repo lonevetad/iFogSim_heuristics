@@ -5,11 +5,17 @@ import java.util.Random;
 
 import org.fog.heuristics.Heuristic;
 
+/**
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ * 
+ */
 public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 
 	public SimulatedAnnealing() {
 		super();
 		this.startingTemperature = 100.0; // randomly decided
+		this.coolingRate = 0.05; // choosen from the paper
 		this.maxAmountNeighbour = 20; // randomly decided
 		this.lowerBoundTemperature = 0;
 		this.lowerBoundEnergy = 1;
@@ -22,7 +28,23 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 	}
 
 	protected int maxAmountNeighbour;
-	protected double startingTemperature, lowerBoundTemperature, lowerBoundEnergy, upperBoundEnergy;
+	protected double startingTemperature, coolingRate, lowerBoundTemperature, lowerBoundEnergy, upperBoundEnergy;
+
+	/**
+	 * @return the startingTemperature
+	 */
+	public double getStartingTemperature() {
+		return startingTemperature;
+	}
+
+	/**
+	 * See {@link #setCoolingRate(double)}.
+	 * 
+	 * @return the coolingRate
+	 */
+	public double getCoolingRate() {
+		return coolingRate;
+	}
 
 	/**
 	 * @return the lowerBoundEnergy
@@ -36,27 +58,6 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 	 */
 	public double getUpperBoundEnergy() {
 		return upperBoundEnergy;
-	}
-
-	/**
-	 * @param lowerBoundEnergy the lowerBoundEnergy to set
-	 */
-	public void setLowerBoundEnergy(double lowerBoundEnergy) {
-		this.lowerBoundEnergy = lowerBoundEnergy;
-	}
-
-	/**
-	 * @param upperBoundEnergy the upperBoundEnergy to set
-	 */
-	public void setUpperBoundEnergy(double upperBoundEnergy) {
-		this.upperBoundEnergy = upperBoundEnergy;
-	}
-
-	/**
-	 * @return the startingTemperature
-	 */
-	public double getStartingTemperature() {
-		return startingTemperature;
 	}
 
 	/**
@@ -74,6 +75,32 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 	}
 
 	//
+
+	/**
+	 * A value that guide the cooling of the temperature inside the
+	 * {@link #decreaseTemperature(double, int, int)} implementation. <br>
+	 * A geometric reduction rule requires this value to be in the range (0; 1)
+	 * extremes excluded
+	 * 
+	 * @param coolingRate the coolingRate to set
+	 */
+	public void setCoolingRate(double coolingRate) {
+		this.coolingRate = coolingRate;
+	}
+
+	/**
+	 * @param lowerBoundEnergy the lowerBoundEnergy to set
+	 */
+	public void setLowerBoundEnergy(double lowerBoundEnergy) {
+		this.lowerBoundEnergy = lowerBoundEnergy;
+	}
+
+	/**
+	 * @param upperBoundEnergy the upperBoundEnergy to set
+	 */
+	public void setUpperBoundEnergy(double upperBoundEnergy) {
+		this.upperBoundEnergy = upperBoundEnergy;
+	}
 
 	/**
 	 * @param startingTemperature the startingTemperature to set
