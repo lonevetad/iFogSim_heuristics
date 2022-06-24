@@ -10,10 +10,11 @@ import org.fog.heuristics.Heuristic;
  * It's just a mapping between a {@code AppModule} and the {@code FogDevice}
  * that will run it.
  * 
- * @author marcoottina
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
  *
  */
-public class PieceOfSolution {
+public class PieceOfSolution implements Cloneable {
 	public PieceOfSolution(AppModule module, FogDevice device) {
 		super();
 		this.module = module;
@@ -74,7 +75,11 @@ public class PieceOfSolution {
 
 	@Override
 	public String toString() {
-		return "PieceOfSolution [module= \t" + module.getName() + "\t, device= \t" + device.getName() + "]";
+		return "PieceOfSolution [module= \"" + module.getName() + "\" -> device= \"" + device.getName() + "\"]";
 	}
 
+	@Override
+	public Object clone() {
+		return new PieceOfSolution(module, device);
+	}
 }

@@ -12,6 +12,9 @@ import org.fog.placement.ModulePlacement;
  * kind of), the one that {@link Heuristic}s will come up with and the
  * {@link ModulePlacement} has to provide and use.<br>
  * That's a
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ *
  */
 public interface SolutionModulesDeployed extends Serializable, Supplier<List<PieceOfSolution>> {
 

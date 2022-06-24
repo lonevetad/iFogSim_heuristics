@@ -1,18 +1,22 @@
 package org.fog.heuristics.fogImplementations;
 
-import java.util.List;
-import java.util.Map;
+import java.util.function.Function;
 
-import org.fog.application.AppModule;
-import org.fog.application.Application;
-import org.fog.entities.FogDevice;
+/**
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ * 
+ */
+public interface HeuristicFogFactory extends Function<ModulePlacementAdditionalInformationFog, HeuristicFog> {
+	public <S extends SolutionModulesDeployed> HeuristicFog newInstance(
+			ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo, SolutionMutatorFog<S> mutator);
 
-public interface HeuristicFogFactory {
-	public <S extends SolutionModulesDeployed> HeuristicFog newInstance(Map<String, Application> applicationsSubmitted,
-			List<AppModule> modules, List<FogDevice> devices, SolutionMutatorFog<S> mutator);
+	public default HeuristicFog newInstance(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		return this.newInstance(modPlacementAdditionalInfo, null);
+	}
 
-	public default HeuristicFog newInstance(Map<String, Application> applicationsSubmitted, List<AppModule> modules,
-			List<FogDevice> devices) {
-		return this.newInstance(applicationsSubmitted, modules, devices, null);
+	@Override
+	public default HeuristicFog apply(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		return this.newInstance(modPlacementAdditionalInfo);
 	}
 }

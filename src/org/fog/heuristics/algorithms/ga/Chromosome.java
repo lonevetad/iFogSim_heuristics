@@ -65,6 +65,10 @@ public abstract class Chromosome<T> implements Cloneable, Supplier<List<T>> {
 		if (c == null || this == c || cGenes.size() != size) {
 			return;
 		}
+		if (size <= 0) {
+			throw new RuntimeException(
+					"No genes to crossover in Genetic Algorithm's Chromosome; genes amount: " + size);
+		}
 		indexCrossover = r.nextInt(size);
 		if (indexCrossover == 0 || indexCrossover == (size - 1)) {
 			List<T> temp;

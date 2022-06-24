@@ -102,9 +102,17 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 		Objects.requireNonNull(r);
 
 		fitnessSortedChromosomes = new TreeSet<>(GeneticAlgorithm::compareForMinHeap);
-
-		population.forEach(c -> fitnessSortedChromosomes.add(new EvaluatedChromosome<>(evaluateSolution(c), c)));
-
+		{
+			final int[] i = { 0 };
+			population.forEach(c -> {
+				if (c.getGenes().isEmpty()) {
+					throw new RuntimeException(
+							"empty set of genes of an original population element (index " + i[0] + ")");
+				}
+				i[0]++;
+				fitnessSortedChromosomes.add(new EvaluatedChromosome<>(evaluateSolution(c), c));
+			});
+		}
 		iteration = 0;
 		minIterations = Math.min(16, (int) Math.ceil(Math.log(maxIterations) / log_2));
 
@@ -117,11 +125,28 @@ public abstract class GeneticAlgorithm<T, C extends Chromosome<T>> implements He
 			fitnessSortedChromosomes.remove(last = fitnessSortedChromosomes.last());
 			fitnessSortedChromosomes.remove(secondToLast = fitnessSortedChromosomes.last());
 
+			if (fittest.chromosome.getGenes().isEmpty()) {
+				throw new RuntimeException("empty fittest genes");
+			}
+
+			if (secondFittest.chromosome.getGenes().isEmpty()) {
+				throw new RuntimeException("empty secondFittest genes");
+			}
+
 			// crossover
 			// ELITIST approach: the crossover modifies the genes, so a clone is required to
 			// preserve the original ones
 			childChromosomeFirst = (C) fittest.chromosome.clone();
 			childChromosomeSecond = (C) secondFittest.chromosome.clone();
+
+			if (childChromosomeFirst.getGenes().isEmpty()) {
+				throw new RuntimeException("empty childChromosomeFirst genes");
+			}
+
+			if (childChromosomeSecond.getGenes().isEmpty()) {
+				throw new RuntimeException("empty childChromosomeSecond genes");
+			}
+
 			childChromosomeFirst.crossoverOnePoint(childChromosomeSecond, r);
 
 			// mutation

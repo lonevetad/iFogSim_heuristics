@@ -64,4 +64,15 @@ public class ChromosomeFog extends Chromosome<PieceOfSolution> implements Soluti
 		c.setPieces(genes);
 		return c;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder(1024);
+		sb.append("ChromosomeFog [\n\tpieces=");
+		pieces.forEach(pos -> {
+			sb.append("\n\t").append(pos);
+		});
+		return sb.append("\n]").toString();
+	}
+
 }

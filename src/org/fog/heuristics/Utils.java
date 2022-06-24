@@ -4,6 +4,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 
+ * @author marcoottina (marco.1995.ottina@gmail.com )
+ */
 public class Utils {
 
 	/**
