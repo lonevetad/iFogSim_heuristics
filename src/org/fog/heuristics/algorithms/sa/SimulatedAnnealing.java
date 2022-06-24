@@ -184,6 +184,7 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 
 		while ((currentIteration++ < maxIterations)
 				&& this.canAnneal(energySolution, initialGuess, energy, temperature, currentIteration, live, r)) {
+			System.out.println("simulated annealing cycling :D");
 			while (!live.isEmpty()) {
 				initialGuess = live.remove(live.size() - 1);
 				energySolution = this.evaluateSolution(initialGuess);

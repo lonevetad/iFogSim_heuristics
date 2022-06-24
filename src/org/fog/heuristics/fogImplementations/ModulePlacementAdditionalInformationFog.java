@@ -32,6 +32,8 @@ public class ModulePlacementAdditionalInformationFog implements ModulePlacementA
 		this.devicesByName = null;
 		this.devicesPartitions = null;
 		this.setDevices(devices);
+		this.setModules(modules);
+		this.setApplicationsByID(appsByID);
 		this.devicesAllowingAssociation = null;
 		this.modulesAllowedToAssociate = null;
 		this.setOriginalModuleMapping(allowedModulesOnDeviceAssociation);

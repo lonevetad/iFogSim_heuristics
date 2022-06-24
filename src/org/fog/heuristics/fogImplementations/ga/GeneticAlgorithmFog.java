@@ -133,8 +133,14 @@ public class GeneticAlgorithmFog implements HeuristicFog {
 	@Override
 	public SolutionModulesDeployed optimize(SolutionModulesDeployed initialGuess, int maxIterations, Random r) {
 		ChromosomeFog best;
-		best = new ChromosomeFog();
-		best.setSolution(initialGuess);
+		if (initialGuess == null || initialGuess.getPieces().isEmpty()) {
+			best = SolutionsProducerEvaluator
+					.newRandomSolution(getApplicationsSubmitted(), getModules(), getDevices(), r, ChromosomeFog::new)
+					.getFirst();
+		} else {
+			best = new ChromosomeFog();
+			best.setSolution(initialGuess);
+		}
 		best = this.ga.optimize(best, maxIterations, r);
 		return best.getSolution();
 	}
@@ -232,7 +238,7 @@ public class GeneticAlgorithmFog implements HeuristicFog {
 
 			population = new ArrayList<ChromosomeFog>(this.populationSize);
 
-			if (initialGuess == null) {
+			if (initialGuess == null || initialGuess.getGenes().isEmpty()) {
 				chrToGenerate = this.populationSize;
 			} else {
 				chrToGenerate = (this.populationSize - 1);

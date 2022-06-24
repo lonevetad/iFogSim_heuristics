@@ -502,6 +502,11 @@ public class SolutionsProducerEvaluator {
 		final SolutionDeployCosts<S> cumulatedCostsEachDevice; // on each device
 		S solution;
 
+		Objects.requireNonNull(applicationsSubmitted);
+		Objects.requireNonNull(modules);
+		Objects.requireNonNull(devices);
+		Objects.requireNonNull(r);
+		Objects.requireNonNull(devicesPartitions);
 		Objects.requireNonNull(solutionFactory);
 
 		pieces = new ArrayList<>(modules.size());
@@ -536,6 +541,7 @@ public class SolutionsProducerEvaluator {
 
 					if (pieceOfSolution == null) {
 						// no suitable devices
+//						System.out.println("piece of solution is null");
 						pieces.clear();
 						break;
 					}
@@ -548,8 +554,13 @@ public class SolutionsProducerEvaluator {
 			return null;
 		}
 
+		if (pieces.isEmpty()) {
+			throw new RuntimeException("can't create a suitable random solution");
+		}
+
 		solution = solutionFactory.apply(pieces);
 		cumulatedCostsEachDevice.setSolution(solution);
+		cumulatedCostsEachDevice.resetCosts(solution, applicationsSubmitted);
 		return new Pair<>(solution, cumulatedCostsEachDevice);
 	}
 
@@ -613,13 +624,22 @@ public class SolutionsProducerEvaluator {
 			availableDevices = devicesPartitions[DeviceNodeType.CloudNode.ordinal()];
 		} else if (!app.isDelayTolerable()) {
 			availableDevices = devicesPartitions[DeviceNodeType.FogNode.ordinal()];
+			if (availableDevices.isEmpty()) {
+				availableDevices = devicesPartitions[DeviceNodeType.FogControllerNode.ordinal()]; // nonFogNodes;
+			}
 		} else {
 			availableDevices = nonFogNodes;
+		}
+
+		if (availableDevices.isEmpty()) {
+			throw new IllegalStateException("module \"" + module.getName() + "\" of type "
+					+ module.getModuleType().name() + " maps to an empty set if devuces");
 		}
 
 		// 2)
 		availableDevices = availableDevices.stream() //
 				.filter(dd -> {
+					boolean accepted;
 					CumulatedCostsOnDevice cc;
 					if (cumulatedCostsEachDevice != null) {
 						if (cumulatedCostsEachDevice.contains(dd)) {
@@ -632,7 +652,10 @@ public class SolutionsProducerEvaluator {
 						cc = new CumulatedCostsOnDevice(dd);
 					}
 
-					return cc.areNewCostsWithinLimits(module, applicationsSubmitted);
+					accepted = cc.areNewCostsWithinLimits(module, applicationsSubmitted);
+//					System.out.println(
+//							"device " + dd.getName() + " is accepted? " + accepted + " .. costs: " + cc.toString());
+					return accepted;
 				})
 				// preferred over "collect(Collectors.toList())" because I can decide what class
 				// to instantiate (ArrayList)
@@ -645,6 +668,7 @@ public class SolutionsProducerEvaluator {
 						(ArrayList<FogDevice> l1, ArrayList<FogDevice> l2) -> l2);
 
 		if (availableDevices.isEmpty()) {
+//			System.out.println("no available devices");
 			// no suitable devices
 			return null;
 		}
@@ -938,7 +962,28 @@ public class SolutionsProducerEvaluator {
 				this.storage -= c.storage;
 				this.executionTime -= c.executionTime;
 			}
+
+			@Override
+			public String toString() {
+				return "Costs [miLoaded=" + miLoaded + ", executionTime=" + executionTime + ", ram=" + ram
+						+ ", storage=" + storage + "]";
+			}
 		}
+
+		@Override
+		public String toString() {
+			StringBuilder sb;
+			sb = new StringBuilder(1024);
+			sb.append("CumulatedCostsOnDevice [ device: \"").append(device.getName()).append("\" - id: ")
+					.append(device.getId()).append(", ");
+			sb.append("total costs: ").append(this.costs.toString());
+
+			return sb.append("]").toString();
+//			return "CumulatedCostsOnDevice [costs=" + costs + ", applicationModulesTimeTracker="
+//					+ applicationModulesTimeTracker + ", costsEachAppModule=" + costsEachAppModule + ", device="
+//					+ device + "]";
+		}
+
 	}
 
 	//
@@ -1078,7 +1123,7 @@ public class SolutionsProducerEvaluator {
 
 		public SolutionDeployCosts(S solution) {
 			this();
-			this.solution = solution;
+			this.setSolution(solution);
 		}
 
 		public Map<String, CumulatedCostsOnDevice> getCumulatedCostsEachDevice() {
@@ -1096,16 +1141,16 @@ public class SolutionsProducerEvaluator {
 			this.solution = solution;
 		}
 
-//		public void resetCosts(S solution) {
-//			this.cumulatedCostsEachDevice.clear();
-//			this.solution = solution;
-//			for(PieceOfSolution pos:this.solution.get()) {
-//				CumulatedCostsOnDevice cc;
-//				cc =new CumulatedCostsOnDevice(pos.getDevice());
-//				cc.accumulateCostsOf(mod, app); // TODO HOW TO DO IT?
-//				this.addCumulatedCosts(cc);
-//			}
-//		}
+		public void resetCosts(S solution, Map<String, Application> applicationsByID) {
+			this.cumulatedCostsEachDevice.clear();
+			this.solution = solution;
+			for (PieceOfSolution pos : this.solution.get()) {
+				CumulatedCostsOnDevice cc;
+				cc = new CumulatedCostsOnDevice(pos.getDevice());
+				cc.accumulateCostsOf(pos.getModule(), applicationsByID.get(pos.getModule().getAppId()));
+				this.addCumulatedCosts(cc);
+			}
+		}
 
 		public CumulatedCostsOnDevice getCumulatedCosts(FogDevice device) {
 			String deviceName;
@@ -1138,6 +1183,20 @@ public class SolutionsProducerEvaluator {
 				this.remove(d);
 			}
 			this.cumulatedCostsEachDevice.put(d.getName(), cc);
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder sb = new StringBuilder(1024);
+			return toString(sb).toString();
+		}
+
+		public StringBuilder toString(StringBuilder sb) {
+			sb.append("SolutionDeployCosts [");
+			cumulatedCostsEachDevice.forEach((devName, cc) -> {
+				sb.append("\n\tdevice \"").append(devName).append("\" -> cost: ").append(cc.toString());
+			});
+			return sb;
 		}
 	}
 

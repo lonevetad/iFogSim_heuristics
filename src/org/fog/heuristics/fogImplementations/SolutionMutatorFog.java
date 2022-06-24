@@ -45,10 +45,6 @@ public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements So
 		this.costsSolutions = new HashMap<>();
 	}
 
-	public void resetContext(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
-		this.modPlacementAdditionalInfo = modPlacementAdditionalInfo;
-	}
-
 	/**
 	 * @return the costsSolutions
 	 */
@@ -72,7 +68,27 @@ public class SolutionMutatorFog<S extends SolutionModulesDeployed> implements So
 		return this.modPlacementAdditionalInfo.getDevicesPartitions();
 	}
 
+	/**
+	 * @return the modPlacementAdditionalInfo
+	 */
+	public ModulePlacementAdditionalInformationFog getModPlacementAdditionalInfo() {
+		return modPlacementAdditionalInfo;
+	}
+
 	//
+
+	/**
+	 * @param modPlacementAdditionalInfo the modPlacementAdditionalInfo to set
+	 */
+	public void setModPlacementAdditionalInfo(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		this.modPlacementAdditionalInfo = modPlacementAdditionalInfo;
+	}
+
+	//
+
+	public void resetContext(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
+		this.setModPlacementAdditionalInfo(modPlacementAdditionalInfo);
+	}
 
 	/**
 	 * DO NOT USE IT! <br>

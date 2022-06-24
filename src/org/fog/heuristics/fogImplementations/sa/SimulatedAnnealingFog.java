@@ -77,7 +77,9 @@ public class SimulatedAnnealingFog extends SimulatedAnnealing<SolutionModulesDep
 	@Override
 	public void setModPlacementAdditionalInfo(ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo) {
 		this.modPlacementAdditionalInfo = modPlacementAdditionalInfo;
-		this.mutationProvider.resetContext(modPlacementAdditionalInfo);
+		if (this.mutationProvider != null) {
+			this.mutationProvider.resetContext(modPlacementAdditionalInfo);
+		}
 	}
 
 	//
@@ -97,8 +99,9 @@ public class SimulatedAnnealingFog extends SimulatedAnnealing<SolutionModulesDep
 //		final Map<String,FogDevice> devicesByNameInOriginalSolution;
 
 		if (originalNode != null && (!(originalNode instanceof SASolutionFog))) {
-			throw new RuntimeException(
-					"Unexpected class for the original solution: " + originalNode.getClass().getName());
+			originalNode = new SASolutionFog(originalNode.getPieces());
+//			throw new RuntimeException(
+//					"Unexpected class for the original solution: " + originalNode.getClass().getName());
 		}
 
 		/**
@@ -111,7 +114,7 @@ public class SimulatedAnnealingFog extends SimulatedAnnealing<SolutionModulesDep
 		 * </ol>
 		 */
 
-		if (originalNode == null) {
+		if (originalNode == null || originalNode.getPieces().isEmpty()) {
 			Pair<SASolutionFog, SolutionDeployCosts<SASolutionFog>> p = SolutionsProducerEvaluator.newRandomSolution(//
 					this.getModPlacementAdditionalInfo().getApplicationsByID(),
 					this.getModPlacementAdditionalInfo().getModules(),
@@ -129,6 +132,10 @@ public class SimulatedAnnealingFog extends SimulatedAnnealing<SolutionModulesDep
 			}
 		}
 
+		if (originalSolutionFog.getPieces().isEmpty()) {
+			throw new RuntimeException("empty originalSolutionFog");
+		}
+
 		// step 1)
 		// .. just ignore it
 
@@ -144,6 +151,10 @@ public class SimulatedAnnealingFog extends SimulatedAnnealing<SolutionModulesDep
 
 			// step 2)
 			neighbour = (SASolutionFog) originalSolutionFog.clone();
+
+			if (neighbour.getPieces().isEmpty()) {
+				throw new RuntimeException("empty neighbour clone");
+			}
 
 			// step 3)
 			neighbour = neighbour.randomWalk(r, this.getMutationProvider(), this.getModPlacementAdditionalInfo());

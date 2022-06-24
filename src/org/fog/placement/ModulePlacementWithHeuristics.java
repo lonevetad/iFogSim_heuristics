@@ -26,6 +26,7 @@ import org.fog.heuristics.fogImplementations.SolutionModulesDeployed;
 import org.fog.heuristics.fogImplementations.SolutionMutatorFog;
 import org.fog.heuristics.fogImplementations.ga.ChromosomeFog;
 import org.fog.heuristics.fogImplementations.ga.GeneticAlgorithmFog;
+import org.fog.heuristics.fogImplementations.sa.SASolutionFog;
 import org.fog.heuristics.fogImplementations.sa.SimulatedAnnealingFog;
 
 /**
@@ -67,15 +68,20 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 					public <S extends SolutionModulesDeployed> HeuristicFog newInstance(
 							ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo,
 							SolutionMutatorFog<S> mutator) {
-						return new GeneticAlgorithmFog(modPlacementAdditionalInfo,
-								new SolutionMutatorFog<ChromosomeFog>());
+						SolutionMutatorFog<ChromosomeFog> mut;
+						mut = new SolutionMutatorFog<ChromosomeFog>();
+						mut.setModPlacementAdditionalInfo(modPlacementAdditionalInfo);
+						return new GeneticAlgorithmFog(modPlacementAdditionalInfo, mut);
 					}
 				}), //
 		SimulatedAnnealing(new HeuristicFogFactory() {
 			@Override
 			public <S extends SolutionModulesDeployed> HeuristicFog newInstance(
 					ModulePlacementAdditionalInformationFog modPlacementAdditionalInfo, SolutionMutatorFog<S> mutator) {
-				return new SimulatedAnnealingFog(modPlacementAdditionalInfo, new SolutionMutatorFog<ChromosomeFog>());
+				SolutionMutatorFog<SASolutionFog> mut;
+				mut = new SolutionMutatorFog<SASolutionFog>();
+				mut.setModPlacementAdditionalInfo(modPlacementAdditionalInfo);
+				return new SimulatedAnnealingFog(modPlacementAdditionalInfo, mut);
 			}
 		});
 
@@ -249,10 +255,11 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 			app.getModules().forEach(m -> mapMod.put(m.getName(), m));
 		});
 
-		this.modules = mods = new ArrayList<>(mapMod.size());
+		mods = new ArrayList<>(mapMod.size());
 		mapMod.forEach((n, m) -> {
 			mods.add(m);
 		});
+		this.setModules(mods);
 	}
 
 	/**
@@ -303,7 +310,7 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		ModulePlacementAdditionalInformationFog additionalInformation;
 
 		additionalInformation = new ModulePlacementAdditionalInformationFog(getModuleMapping(), getModulesByName(),
-				getApplicationsByID(), modules, getFogDevices(), getLatenciesBetweenDeviceTypes());
+				getApplicationsByID(), getModules(), getFogDevices(), getLatenciesBetweenDeviceTypes());
 
 		//
 
@@ -457,7 +464,10 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 			} else {
 				prevSolution = solution;
 			}
+			System.out.println("module placement " + maxIterations + " iterations left");
 		} while (improvedEnough && maxIterations-- > 0);
+
+		System.out.println("solution: " + solution);
 		return solution;
 	}
 

@@ -57,6 +57,10 @@ public class SASolutionFog implements Cloneable, Supplier<List<PieceOfSolution>>
 		PieceOfSolution posToChange;
 		FogDevice originalDevice;
 
+		if (this.pieces.size() <= 0) {
+			throw new RuntimeException(
+					"No pieces to randomwalk in Simulated Annealing's solution; pieces amount: " + this.pieces.size());
+		}
 		indexFlip = r.nextInt(this.pieces.size());
 		newList = new ArrayList<>();
 		posToChange = null;
@@ -95,4 +99,17 @@ public class SASolutionFog implements Cloneable, Supplier<List<PieceOfSolution>>
 		this.pieces.forEach(pos -> p.add((PieceOfSolution) pos.clone()));
 		return new SASolutionFog(p);
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder(1024);
+		sb.append("SASolutionFog [\n\tpieces=");
+		pieces.forEach(pos -> {
+			sb.append("\n\t").append(pos);
+		});
+		sb.append('\n');
+		costs.toString(sb);
+		return sb.append("\n]").toString();
+	}
+
 }

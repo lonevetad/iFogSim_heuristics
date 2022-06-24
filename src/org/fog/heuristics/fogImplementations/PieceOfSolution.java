@@ -75,7 +75,7 @@ public class PieceOfSolution implements Cloneable {
 
 	@Override
 	public String toString() {
-		return "PieceOfSolution [module= \t" + module.getName() + "\t, device= \t" + device.getName() + "]";
+		return "PieceOfSolution [module= \"" + module.getName() + "\" -> device= \"" + device.getName() + "\"]";
 	}
 
 	@Override
