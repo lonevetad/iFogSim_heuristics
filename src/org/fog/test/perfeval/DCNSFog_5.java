@@ -146,6 +146,7 @@ public class DCNSFog_5 {
 					moduleMapping, fogDevices, sensors, actuators, allApplications, latenciesBetweenDeviceTypes);
 
 			for (Application application : allApplications) {
+				System.out.println("start submitting appliaction " + application.getAppId());
 				controller.submitApplication(application, modulePlacement
 				/*
 				 * (CLOUD) ? (new ModulePlacementMapping(fogDevices, application,
@@ -157,8 +158,10 @@ public class DCNSFog_5 {
 
 			TimeKeeper.getInstance().setSimulationStartTime(Calendar.getInstance().getTimeInMillis());
 
+			System.out.println("starting simulation");
 			CloudSim.startSimulation();
 
+			System.out.println("stopping simulation");
 			CloudSim.stopSimulation();
 
 			Log.printLine("VRGame finished!");
