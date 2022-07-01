@@ -145,8 +145,9 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 	 */
 	public boolean canAnneal(double energySolution, T currentSolution, double energy, double temperature,
 			int currentIteration, List<T> liveNeighbours, Random r) {
-		return (!liveNeighbours.isEmpty()) && temperature > this.lowerBoundTemperature && this.lowerBoundEnergy < energy
-				&& energy > this.upperBoundEnergy;
+		return (!liveNeighbours.isEmpty()) && temperature > this.lowerBoundTemperature
+				&& energy > this.lowerBoundEnergy;
+//				&& energy <= this.upperBoundEnergy
 	}
 
 	/**
@@ -184,7 +185,6 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 
 		while ((currentIteration++ < maxIterations)
 				&& this.canAnneal(energySolution, initialGuess, energy, temperature, currentIteration, live, r)) {
-			System.out.println("simulated annealing cycling :D");
 			while (!live.isEmpty()) {
 				initialGuess = live.remove(live.size() - 1);
 				energySolution = this.evaluateSolution(initialGuess);
@@ -195,7 +195,7 @@ public abstract class SimulatedAnnealing<T> implements Heuristic<T> {
 					if (temperature != 0.0) {
 						prob = Math.exp(-(energySolution - energy) / temperature);
 					}
-					if (r.nextDouble() < prob) {
+					if (prob > 0.0 && r.nextDouble() < prob) {
 						expanded = initialGuess;
 					} // else: keep the expanded
 				}

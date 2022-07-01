@@ -379,8 +379,6 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 
 		ap = new ApplicationsPlacements();
 		ap.setSolutionModulesDeployed(solution);
-//		this.sensors.forEach(ap.sensorsActuatorsQueue::add);
-//		this.actuators.forEach(ap.sensorsActuatorsQueue::add);
 
 		pq = new PriorityQueue<>(APP_COMPARATOR);
 		this.getApplications().forEach(pq::add);
@@ -397,8 +395,6 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 				}
 			});
 		}
-
-		// REFER TO THE PDF page 11 - Algorithm 1
 
 		return ap;
 	}
@@ -419,20 +415,6 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 		SolutionModulesDeployed solution, prevSolution;
 
 		r = new Random();
-//		mapAppl = new HashMap<>();
-//		mapMod = new HashMap<>();
-//
-//		getApplications().forEach(app -> {
-//			mapAppl.put(app.getAppId(), app);
-//
-//			app.getModules().forEach(m -> mapMod.put(m.getName(), m));
-//		});
-//
-//		modules = new ArrayList<>(mapMod.size());
-//		mapMod.forEach((n, m) -> {
-//			modules.add(m);
-//		});
-//		mapMod.clear();
 
 		mutator = new SolutionMutatorFog<>();
 		solution = prevSolution = null;
@@ -464,10 +446,10 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 			} else {
 				prevSolution = solution;
 			}
-			System.out.println("module placement " + maxIterations + " iterations left");
 		} while (improvedEnough && maxIterations-- > 0);
 
-		System.out.println("solution: " + solution);
+		System.out.println(this.getClass().getName() + ", solution:");
+		System.out.println(solution);
 		return solution;
 	}
 
