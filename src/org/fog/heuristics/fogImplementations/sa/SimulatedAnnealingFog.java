@@ -174,6 +174,6 @@ public class SimulatedAnnealingFog extends SimulatedAnnealing<SolutionModulesDep
 
 	@Override
 	public double decreaseTemperature(double originalTemperature, int currentIteration, int maxIterations) {
-		return originalTemperature * this.coolingRate; // geometric cooling
+		return originalTemperature * (1.0 - this.coolingRate); // geometric cooling
 	}
 }

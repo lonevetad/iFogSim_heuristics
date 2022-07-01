@@ -358,6 +358,8 @@ public class ModulePlacementWithHeuristics extends ModulePlacement {
 
 		// 2) run that map to invoke "createModuleInstanceOnDevice(module,device)"
 		modAdder = m -> {
+			System.out.println("\nadding module \"" + m.getName() + "\" tp device \""
+					+ mapModuleDevice.get(m.getName()).getName() + "\"");
 			createModuleInstanceOnDevice(m, mapModuleDevice.get(m.getName()));
 		};
 		ap.highCostQueue.forEach(modAdder);
